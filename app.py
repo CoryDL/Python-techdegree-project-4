@@ -22,6 +22,23 @@ def menu():
             \r(The letter in parenthesis)\n
             \rPress enter to try again''')
 
+
+def valid_name(name_str):
+    try:
+        product_name = name_str
+        if not product_name:
+            raise ValueError('''
+            \n****** Name Error ******
+            \rThe name cannot be empty
+            \rPress enter to try again.
+            \r************************''')
+    except ValueError as e:
+        print(e)
+        return
+    else:
+        return product_name
+
+
 def clean_date(date_str):
     try:
         split_date = date_str.split('/')
@@ -39,8 +56,6 @@ def clean_date(date_str):
         return
     else:
         return return_date
-        
-
 
 
 def clean_price(price_str):
@@ -48,19 +63,40 @@ def clean_price(price_str):
     if dollarsign in price_str:
         sans_dollarsign = price_str.replace(dollarsign, '')
         price_str = sans_dollarsign
-    price_float = float(price_str)
-    return int(price_float * 100)
+    try:
+        price_float = float(price_str)
+    except ValueError:
+        input('''
+            \n****** PRICE ERROR******
+            \rThe ID you entered was not valid.
+            \rThe price must be a number in the format provided in the example.
+            \rPress enter to try again.
+            \r************************''')
+        return
+    else:
+        return int(price_float * 100)
 
 
 def clean_quantity(quantity_str):
-    return int(quantity_str)
+    try:
+        product_quantity = int(quantity_str)
+    except ValueError:
+        input('''
+            \n****** Quatity Error ******
+            \rThe quantity should be a number
+            \rPress enter to try again.
+            \r***************************''')
+        return
+    else:
+        return int(quantity_str)
+
 
 def clean_id(id_str, options):
     try:
         product_id = int(id_str)
     except ValueError:
         input('''
-            \n****** ID ERROR******
+            \n****** ID ERROR *******
             \rThe id should be a number.
             \rPress enter to try again.
             \r***********************''')
@@ -78,7 +114,7 @@ def clean_id(id_str, options):
 
 
 def add_csv():
-    with open('store-inventory\inventory.csv') as csvfile:
+    with open('store-inventory/inventory.csv') as csvfile:
         data = csv.reader(csvfile)
         next(data)
         for row in data:
@@ -90,6 +126,11 @@ def add_csv():
                 date_updated = clean_date(row[3])
                 new_product = Product(product_name = product_name, product_price = product_price, product_quantity = product_quantity, date_updated = date_updated)
                 session.add(new_product)
+            elif product_in_db.date_updated < clean_date(row[3]):
+                product_in_db.product_price = clean_price(row[1])
+                product_in_db.product_quantity = clean_quantity(row[2])
+                product_in_db.date_updated = clean_date(row[3])
+
         session.commit()
 
 
@@ -118,14 +159,24 @@ def app():
                 \rDate Updated: {the_product.date_updated}\n''')
         elif choice.lower() == 'a':
             # add new
-            product_name = input('Product name: ')
+            name_error = True
+            while name_error:
+                product_name = input('Product name: ')
+                product_name = valid_name(product_name)
+                if product_name:
+                    name_error = False       
             price_error = True
             while price_error:
                 product_price = input('Product price (Ex: 7.99): ')
                 product_price = clean_price(product_price)
                 if type(product_price) == int:
                     price_error = False
-            product_quantity = input('Product quantity: ')
+            quantity_error = True
+            while quantity_error:
+                product_quantity = input('Product Quantity: ')
+                product_quantity = clean_quantity(product_quantity)
+                if type(product_quantity) == int:
+                    quantity_error = False
             date_error = True
             while date_error:
                 date_updated = input('Date (Ex: MM/DD/YYYY): ')
@@ -139,9 +190,7 @@ def app():
                     print('new product is False')
                 else:
                     new_product = True
-
             if new_product == True:
-                print('new product is True')
                 new_product_addition = Product(product_name = product_name, product_price = product_price, product_quantity = product_quantity, date_updated = date_updated)
                 session.add(new_product_addition)                
                 session.commit()
@@ -153,16 +202,13 @@ def app():
                 product_update.date_updated = date_updated
                 session.commit()
                 print('Product Has been Updated')
-
             time.sleep(1.5)
-
         elif choice.lower() == 'b':
             # backup db
             current_product_data = session.query(Product)
             with open('backup.csv', 'w', newline='') as csvfile:
                 fieldnames = ['product_name','product_price','product_quantity','date_updated']
                 teachwriter = csv.DictWriter(csvfile, fieldnames = fieldnames)
-
                 teachwriter.writeheader()
                 for product in current_product_data:
                     teachwriter.writerow({
@@ -170,8 +216,7 @@ def app():
                             'product_price': product.product_price,
                             'product_quantity': product.product_quantity,
                             'date_updated': product.date_updated
-                        })
-                
+                        })          
             print('Backup Created')
         else:
             # exit
