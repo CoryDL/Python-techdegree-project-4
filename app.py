@@ -183,18 +183,21 @@ def app():
                 date_updated = clean_date(date_updated)
                 if type(date_updated) == datetime.date:
                     date_error = False
+            new_product = True
             for product in session.query(Product):
                 if product.product_name == product_name:
                     product_update = product
                     new_product = False
-                    print('new product is False')
-                else:
-                    new_product = True
+                    #print('new product is False')
+                    break
+
+                    
             if new_product == True:
                 new_product_addition = Product(product_name = product_name, product_price = product_price, product_quantity = product_quantity, date_updated = date_updated)
                 session.add(new_product_addition)                
                 session.commit()
                 print('Product Added')
+                #print(new_product)
             else:
                 print('Old product is being updated')
                 product_update.product_price = product_price
